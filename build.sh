@@ -1,9 +1,10 @@
 #!/bin/bash
-# Builds "Claude Traffic Light.app" into ./build using swiftc (no Xcode project needed).
+# Code Traffic Light — Copyright (c) 2026 Shadi Kharbat. MIT License.
+# Builds "Code Traffic Light.app" into ./build using swiftc (no Xcode project needed).
 set -euo pipefail
 cd "$(dirname "$0")"
 
-APP="build/Claude Traffic Light.app"
+APP="build/Code Traffic Light.app"
 ARCH="$(uname -m)"
 
 rm -rf "$APP"
@@ -12,7 +13,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 swiftc -O \
   -swift-version 5 \
   -target "${ARCH}-apple-macosx13.0" \
-  -o "$APP/Contents/MacOS/ClaudeTrafficLight" \
+  -o "$APP/Contents/MacOS/CodeTrafficLight" \
   Sources/main.swift
 
 cp Info.plist "$APP/Contents/Info.plist"

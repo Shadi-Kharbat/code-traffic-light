@@ -1,5 +1,6 @@
 #!/bin/bash
-# Installs Claude Traffic Light:
+# Code Traffic Light — Copyright (c) 2026 Shadi Kharbat. MIT License.
+# Installs Code Traffic Light:
 #   1. builds the app (if needed)
 #   2. copies the hook script to ~/.claude/traffic-light/
 #   3. merges the hooks into ~/.claude/settings.json (backup is kept)
@@ -10,19 +11,21 @@ cd "$(dirname "$0")"
 command -v jq >/dev/null 2>&1 || { echo "jq is required (brew install jq)"; exit 1; }
 
 TARGET_DIR="$HOME/.claude/traffic-light"
-HOOK_PATH="$TARGET_DIR/claude-status-hook.sh"
+HOOK_PATH="$TARGET_DIR/traffic-light-hook.sh"
 SETTINGS="$HOME/.claude/settings.json"
-APP_SRC="build/Claude Traffic Light.app"
-APP_DST="$HOME/Applications/Claude Traffic Light.app"
+APP_SRC="build/Code Traffic Light.app"
+APP_DST="$HOME/Applications/Code Traffic Light.app"
+OLD_APP_DST="$HOME/Applications/Claude Traffic Light.app"   # name used before v1.1
 
 # 1. build
-if [ ! -x "$APP_SRC/Contents/MacOS/ClaudeTrafficLight" ] || [ "${REBUILD:-0}" = "1" ]; then
+if [ ! -x "$APP_SRC/Contents/MacOS/CodeTrafficLight" ] || [ "${REBUILD:-0}" = "1" ]; then
   bash "$(dirname "$0")/build.sh"
 fi
 
 # 2. hook script
 mkdir -p "$TARGET_DIR/sessions"
-cp claude-status-hook.sh "$HOOK_PATH"
+cp traffic-light-hook.sh "$HOOK_PATH"
+rm -f "$TARGET_DIR/claude-status-hook.sh" "$TARGET_DIR/source/claude-status-hook.sh"   # pre-v1.1 name
 chmod +x "$HOOK_PATH"
 
 # 3. settings.json
@@ -34,7 +37,7 @@ cp "$SETTINGS" "$BACKUP"
 TMP="$(mktemp)"
 jq --arg cmd "\"$HOOK_PATH\"" '
   def clean:
-    map(select(((.hooks // []) | map(.command // "") | join(" ") | contains("claude-status-hook")) | not));
+    map(select(((.hooks // []) | map(.command // "") | join(" ") | test("claude-status-hook|traffic-light-hook")) | not));
   def entry($args; $matcher; $timeout):
     {"hooks": [{"type": "command", "command": ($cmd + " " + $args), "timeout": $timeout}]}
     + (if $matcher == null then {} else {"matcher": $matcher} end);
@@ -57,13 +60,19 @@ mv -f "$TMP" "$SETTINGS"
 #    (edit ~/.claude/traffic-light/source/Sources/main.swift, then REBUILD=1 ~/.claude/traffic-light/source/install.sh)
 mkdir -p "$TARGET_DIR/source/Sources"
 cp Sources/main.swift "$TARGET_DIR/source/Sources/"
-cp Info.plist build.sh install.sh uninstall.sh claude-status-hook.sh README.md "$TARGET_DIR/source/"
+cp Info.plist build.sh install.sh uninstall.sh traffic-light-hook.sh README.md LICENSE "$TARGET_DIR/source/"
 
 # 5. app
 mkdir -p "$HOME/Applications"
-if pgrep -xq ClaudeTrafficLight; then
-  osascript -e 'tell application id "local.claude-traffic-light" to quit' >/dev/null 2>&1 || pkill -x ClaudeTrafficLight || true
+if pgrep -xq CodeTrafficLight; then
+  osascript -e 'tell application id "local.code-traffic-light" to quit' >/dev/null 2>&1 || pkill -x CodeTrafficLight || true
   sleep 0.5
+fi
+# migrate from the pre-v1.1 name: quit it, remove it, keep its saved position and sound choice
+if pgrep -xq ClaudeTrafficLight; then pkill -x ClaudeTrafficLight || true; sleep 0.5; fi
+rm -rf "$OLD_APP_DST"
+if defaults read local.claude-traffic-light >/dev/null 2>&1 && ! defaults read local.code-traffic-light >/dev/null 2>&1; then
+  defaults export local.claude-traffic-light - 2>/dev/null | defaults import local.code-traffic-light - 2>/dev/null || true
 fi
 rm -rf "$APP_DST"
 cp -R "$APP_SRC" "$APP_DST"

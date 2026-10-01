@@ -1,6 +1,6 @@
-# Claude Traffic Light 🚦
+# Code Traffic Light 🚦
 
-A floating macOS widget that shows what **Claude Code** is doing right now, as a horizontal traffic light styled like the built-in macOS desktop widgets: red while Claude waits for you, yellow while it works, green (with a sound) when it has finished. The footer shows a summary of the last run, the same way the Claude app shows it.
+A floating macOS status widget for **Claude Code**. It shows what Claude Code is doing right now, as a horizontal traffic light styled like the built-in macOS desktop widgets: red while Claude waits for you, yellow while it works, green (with a sound) when it has finished. The footer shows a summary of the last run, the same way the Claude app shows it.
 
 <p align="center"><img src="docs/preview.png" width="380" alt="The three widget states: Ready, Thinking, Done"></p>
 
@@ -13,7 +13,7 @@ A floating macOS widget that shows what **Claude Code** is doing right now, as a
 | 🟢 Green | `Done` | Claude finished its reply. A sound plays, the light stays green for **10 seconds**, then returns to red |
 
 - **Last Run** – `4m 44s · 4.6k tokens`: how long the last run took (from your prompt to Claude's last message) and how many output tokens Claude generated.
-- **Watermark** – the Claude starburst, very translucent, tinted with the colour of the active light.
+- **Watermark** – a soft sparkle, very translucent, tinted with the colour of the active light.
 - **Menu bar dot** – same colour as the traffic light, with a menu that also shows the context-window usage (`Context: 365k / 1M (36%)`).
 - **Sleep mode** – after 10 minutes without any Claude activity the widget dims so it does not catch your eye. Hovering over it, or any new event, wakes it up.
 
@@ -23,10 +23,10 @@ Several Claude Code windows at once? The widget merges them: if any session is w
 
 Three parts, all local to your Mac:
 
-1. **Claude Code hooks** – `install.sh` adds commands to `~/.claude/settings.json` that run `claude-status-hook.sh` on the events
+1. **Claude Code hooks** – `install.sh` adds commands to `~/.claude/settings.json` that run `traffic-light-hook.sh` on the events
    `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PreCompact`, `Notification`, `Stop` and `SessionEnd`.
 2. **State files** – the script writes one small JSON file per session to `~/.claude/traffic-light/sessions/<session_id>.json`, holding the state (`ready` / `working` / `done`), the label, the pid of the Claude Code process and the last-run figures.
-3. **The app** – `Claude Traffic Light.app` (Swift/AppKit, no dependencies) polls those files 20 times a second and draws the traffic light.
+3. **The app** – `Code Traffic Light.app` (Swift/AppKit, no dependencies) polls those files 20 times a second and draws the traffic light.
 
 ### Where the Last Run figures come from
 
@@ -53,18 +53,18 @@ Nothing is summed across calls for the cache, so the figures match what you see 
 ## Install
 
 ```bash
-git clone https://github.com/Shadi-Kharbat/claude-traffic-light.git
-cd claude-traffic-light
+git clone https://github.com/Shadi-Kharbat/code-traffic-light.git
+cd code-traffic-light
 bash install.sh
 ```
 
 What `install.sh` does:
 
 1. Builds the app with `swiftc` into `build/`.
-2. Copies the hook script to `~/.claude/traffic-light/claude-status-hook.sh`.
+2. Copies the hook script to `~/.claude/traffic-light/traffic-light-hook.sh`.
 3. **Backs up** `~/.claude/settings.json` (to `~/.claude/traffic-light/settings.backup.<date>.json`) and merges the hooks into it. The install is idempotent: run it as often as you like, nothing is duplicated and other settings in the file are untouched.
 4. Keeps a copy of the source in `~/.claude/traffic-light/source`, so you can rebuild even without this repo.
-5. Copies the app to `~/Applications/Claude Traffic Light.app` and launches it.
+5. Copies the app to `~/Applications/Code Traffic Light.app` and launches it.
 
 New Claude Code sessions drive the widget immediately. A session that was already open before the install may need to be restarted.
 
@@ -88,7 +88,7 @@ New Claude Code sessions drive the widget immediately. A session that was alread
 | Watermark opacity (idle / working) | `TrafficLightView.logoAlpha`, `logoAlphaWorking` | 0.10 / 0.18 |
 | Card size, light diameter, corner radius | `TrafficLightView.size`, `lightDiameter`, `cornerRadius` | 340×158, 86, 22 |
 | Translucent background material | `effect.material` in `buildPanel()` | `.hudWindow` |
-| Labels | `LABEL=` in `claude-status-hook.sh` and `Light.defaultLabel` in `main.swift` | Ready / Thinking… / Done |
+| Labels | `LABEL=` in `traffic-light-hook.sh` and `Light.defaultLabel` in `main.swift` | Ready / Thinking… / Done |
 | Context-window size per model | `RunStats.windowSize` | Claude 5 and `[1m]`: 1M, Claude 4: 200k |
 
 After any change:
@@ -101,15 +101,15 @@ REBUILD=1 bash install.sh
 
 ```bash
 # What the widget shows right now (same code path as the app)
-"$HOME/Applications/Claude Traffic Light.app/Contents/MacOS/ClaudeTrafficLight" --status
+"$HOME/Applications/Code Traffic Light.app/Contents/MacOS/CodeTrafficLight" --status
 
 # Render the three states to an image
-"$HOME/Applications/Claude Traffic Light.app/Contents/MacOS/ClaudeTrafficLight" --preview /tmp/preview.png
+"$HOME/Applications/Code Traffic Light.app/Contents/MacOS/CodeTrafficLight" --preview /tmp/preview.png
 
 # Simulate events by hand
-echo '{"session_id":"test"}' | ~/.claude/traffic-light/claude-status-hook.sh UserPromptSubmit   # yellow
-echo '{"session_id":"test"}' | ~/.claude/traffic-light/claude-status-hook.sh Stop               # green + sound
-echo '{"session_id":"test"}' | ~/.claude/traffic-light/claude-status-hook.sh SessionEnd         # cleanup
+echo '{"session_id":"test"}' | ~/.claude/traffic-light/traffic-light-hook.sh UserPromptSubmit   # yellow
+echo '{"session_id":"test"}' | ~/.claude/traffic-light/traffic-light-hook.sh Stop               # green + sound
+echo '{"session_id":"test"}' | ~/.claude/traffic-light/traffic-light-hook.sh SessionEnd         # cleanup
 
 # Short log of state changes and sounds
 tail ~/.claude/traffic-light/widget.log
@@ -136,7 +136,7 @@ jq '.hooks | map_values(length)' ~/.claude/settings.json
     "hooks": [
       {
         "type": "command",
-        "command": "\"/Users/<you>/.claude/traffic-light/claude-status-hook.sh\" Stop",
+        "command": "\"/Users/<you>/.claude/traffic-light/traffic-light-hook.sh\" Stop",
         "timeout": 20
       }
     ]
@@ -150,7 +150,7 @@ jq '.hooks | map_values(length)' ~/.claude/settings.json
 
 - Everything runs locally. The app and the script **never touch the network, the Keychain or any credentials**.
 - The script reads only the transcript of the session the hook was called from, and keeps nothing but numbers (timings and token counts). Conversation content is not stored anywhere else.
-- Files created: `~/.claude/traffic-light/` (script, state files, log, settings backups, source copy) and `~/Applications/Claude Traffic Light.app`.
+- Files created: `~/.claude/traffic-light/` (script, state files, log, settings backups, source copy) and `~/Applications/Code Traffic Light.app`.
 
 ## Known limitations
 
@@ -169,12 +169,21 @@ Removes the hooks from `settings.json` (with a backup), quits and deletes the ap
 ## Repository layout
 
 ```
-claude-traffic-light/
+code-traffic-light/
 ├── Sources/main.swift        # the app: state model, drawing, menu, sound, sleep mode
-├── claude-status-hook.sh     # the hook: event -> state file, Last Run figures from the transcript
+├── traffic-light-hook.sh     # the hook: event -> state file, Last Run figures from the transcript
 ├── install.sh                # build, merge hooks (with backup), install to ~/Applications
 ├── uninstall.sh              # full removal
 ├── build.sh                  # build only (swiftc, no Xcode needed)
 ├── Info.plist                # LSUIElement: no Dock icon
-└── docs/preview.png          # the preview image above (generated with --preview)
+├── docs/preview.png          # the preview image above (generated with --preview)
+└── LICENSE                   # MIT
 ```
+
+## License
+
+Copyright © 2026 Shadi Kharbat. Released under the [MIT License](LICENSE): you may use, copy, modify and redistribute this software, provided the copyright notice and the license text stay with it.
+
+## Trademarks
+
+Code Traffic Light is an independent project. It is not affiliated with, endorsed by or sponsored by Anthropic. "Claude" and "Claude Code" are trademarks of Anthropic, PBC, and are used here only to describe the software this widget works with.

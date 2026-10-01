@@ -1,17 +1,20 @@
-// Claude Traffic Light — a floating macOS widget that shows what Claude Code is doing,
-// styled like the built-in desktop widgets (translucent material, rounded corners).
+// Code Traffic Light — a floating macOS status widget for Claude Code.
+// Copyright (c) 2026 Shadi Kharbat. MIT License (see LICENSE).
+//
+// Shows what Claude Code is doing, styled like the built-in desktop widgets
+// (translucent material, rounded corners).
 //
 //   🔴 Ready        Claude is idle and waiting for you
 //   🟡 Thinking…    Claude is working (thinking / running tools / processing)
 //   🟢 Done         Claude just finished — stays green for 10 s, then back to red (and a sound plays)
 //
-// A very faint Claude starburst is drawn behind everything as a watermark.
+// A very faint sparkle is drawn behind everything as a watermark.
 //
 // The footer ("Last Run") shows the last run the way Claude's app does: "4m 44s · 4.6k tokens".
 // After 10 minutes without any Claude activity the widget dims ("sleep"); hovering wakes it.
 //
 // State comes from ~/.claude/traffic-light/sessions/<session>.json, written by the
-// Claude Code hook script (claude-status-hook.sh). One file per Claude Code session.
+// Claude Code hook script (traffic-light-hook.sh). One file per Claude Code session.
 
 import Cocoa
 import ServiceManagement
@@ -217,7 +220,7 @@ final class TrafficLightView: NSView {
     static let lightDiameter: CGFloat = 86
     static let sidePadding: CGFloat = 22
     static let topPadding: CGFloat = 20
-    /// Opacity of the Claude starburst watermark behind the lights (idle / while working).
+    /// Opacity of the sparkle watermark behind the lights (idle / while working).
     static let logoAlpha: CGFloat = 0.10
     static let logoAlphaWorking: CGFloat = 0.18
 
@@ -288,39 +291,35 @@ final class TrafficLightView: NSView {
         drawFooter(in: b, lightsBottom: y)
     }
 
-    /// The Claude starburst: 12 tapered rays of slightly uneven length, drawn as one path
-    /// so the low alpha stays uniform where rays meet. It takes the colour of the active light,
-    /// and while Claude works it breathes and slowly spins, like the logo in Claude's app.
+    /// Watermark: a generic eight-point sparkle (four long points, four short) with concave sides,
+    /// drawn as one path so the low alpha stays uniform. It takes the colour of the active light,
+    /// and while Claude works it breathes and slowly spins.
     private func drawLogo(in b: NSRect) {
         let center = NSPoint(x: b.midX, y: b.midY)
         let working = resolved.light == .yellow
         let breath = working ? CGFloat(sin(pulsePhase * 0.7)) : 0
-        let radius = b.height * 0.47 * (1 + 0.04 * breath)
-        let spin: CGFloat = working ? CGFloat(pulsePhase) * 0.12 : 0
+        let radius = b.height * 0.46 * (1 + 0.05 * breath)
+        let spin: CGFloat = working ? CGFloat(pulsePhase) * 0.10 : 0
         let alpha = working ? Self.logoAlphaWorking : Self.logoAlpha
-        let lengths: [CGFloat] = [1.00, 0.80, 0.94, 0.76, 1.00, 0.82, 0.90, 0.78, 0.97, 0.84, 0.92, 0.80]
-        let jitter: [CGFloat]  = [0, 3, -2, 4, -3, 2, 0, -4, 3, -2, 2, -3]   // degrees
+        let points = 8
+
+        var tips: [NSPoint] = []
+        for i in 0..<points {
+            var r = radius * (i % 2 == 0 ? 1.0 : 0.46)
+            if working { r *= 1 + 0.08 * CGFloat(sin(pulsePhase * 1.5 + Double(i) * 1.2)) }
+            let a = CGFloat(i) * (2 * .pi / CGFloat(points)) + spin
+            tips.append(NSPoint(x: center.x + cos(a) * r, y: center.y + sin(a) * r))
+        }
 
         let path = NSBezierPath()
-        for i in 0..<12 {
-            let angle = (CGFloat(i) * 30 + 12 + jitter[i]) * .pi / 180 + spin
-            let dir = NSPoint(x: cos(angle), y: sin(angle))
-            let perp = NSPoint(x: -dir.y, y: dir.x)
-            var len = radius * lengths[i]
-            if working { len *= 1 + 0.10 * CGFloat(sin(pulsePhase * 1.6 + Double(i) * 0.9)) }
-            let innerR = radius * 0.05, innerHalf = radius * 0.022
-            let outerHalf = radius * 0.072, bevel = radius * 0.07
-
-            func pt(_ r: CGFloat, _ side: CGFloat) -> NSPoint {
-                NSPoint(x: center.x + dir.x * r + perp.x * side, y: center.y + dir.y * r + perp.y * side)
-            }
-            path.move(to: pt(innerR, -innerHalf))
-            path.line(to: pt(len - bevel, -outerHalf))
-            path.line(to: pt(len, outerHalf * 0.9))
-            path.line(to: pt(innerR, innerHalf))
-            path.close()
+        path.move(to: tips[0])
+        let pull = radius * 0.17   // how far the concave sides sink towards the centre
+        for i in 1...points {
+            let mid = (CGFloat(i) - 0.5) * (2 * .pi / CGFloat(points)) + spin
+            let control = NSPoint(x: center.x + cos(mid) * pull, y: center.y + sin(mid) * pull)
+            path.curve(to: tips[i % points], controlPoint1: control, controlPoint2: control)
         }
-        path.windingRule = .nonZero
+        path.close()
         resolved.light.color.withAlphaComponent(alpha).setFill()
         path.fill()
     }
@@ -559,7 +558,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         image.isTemplate = false
         statusItem.button?.image = image
-        statusItem.button?.toolTip = "Claude: \(current.label)"
+        statusItem.button?.toolTip = "Claude Code: \(current.label)"
     }
 
     // MARK: Menu
@@ -574,7 +573,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.addItem(item)
         }
 
-        info("Claude Traffic Light")
+        info("Code Traffic Light")
         info("Status: \(current.label)" + (isDimmed ? " (sleeping)" : ""))
         info("Last Run: \(Format.footerCandidates(current.tokens).first ?? "—")")
         info("Context: \(Format.contextSummary(current.tokens))")
@@ -739,8 +738,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
 // MARK: - CLI helpers
 //
-//   ClaudeTrafficLight --preview out.png   renders the three states to a PNG (for docs / verification)
-//   ClaudeTrafficLight --status            prints the state the widget would show right now
+//   CodeTrafficLight --preview out.png   renders the three states to a PNG (for docs / verification)
+//   CodeTrafficLight --status            prints the state the widget would show right now
 
 func renderPreview(to path: String) -> Bool {
     let scale: CGFloat = 2

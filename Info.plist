@@ -5,15 +5,15 @@
   <key>CFBundleDevelopmentRegion</key>
   <string>en</string>
   <key>CFBundleExecutable</key>
-  <string>ClaudeTrafficLight</string>
+  <string>CodeTrafficLight</string>
   <key>CFBundleIdentifier</key>
-  <string>local.claude-traffic-light</string>
+  <string>local.code-traffic-light</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleName</key>
-  <string>Claude Traffic Light</string>
+  <string>Code Traffic Light</string>
   <key>CFBundleDisplayName</key>
-  <string>Claude Traffic Light</string>
+  <string>Code Traffic Light</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
@@ -26,6 +26,8 @@
   <true/>
   <key>NSHighResolutionCapable</key>
   <true/>
+  <key>NSHumanReadableCopyright</key>
+  <string>Copyright © 2026 Shadi Kharbat. MIT License.</string>
   <key>NSPrincipalClass</key>
   <string>NSApplication</string>
 </dict>
