@@ -180,6 +180,10 @@ code-traffic-light/
 └── LICENSE                   # MIT
 ```
 
+## Feedback and contributions
+
+Found a bug, have an idea, or want to show how you use it? Open an [issue](../../issues) or start a [discussion](../../discussions). Pull requests are welcome. If the widget is useful to you, a ⭐ helps others find it.
+
 ## License
 
 Copyright © 2026 Shadi Kharbat. Released under the [MIT License](LICENSE): you may use, copy, modify and redistribute this software, provided the copyright notice and the license text stay with it.
